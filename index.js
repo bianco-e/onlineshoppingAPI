@@ -1,10 +1,15 @@
-var express = require("express");
+const express = require("express");
 const mongoose = require("mongoose");
+const cors = require("cors");
 const Product = require("./models/productModel");
 const Categories = require("./models/categoriesModel");
 const Message = require("./models/messageModel");
 const Config = require("./models/configModel");
-var app = express();
+const bodyParser = require("body-parser");
+const jsonParser = bodyParser.json();
+const app = express();
+
+app.use(cors());
 
 mongoose.connect("mongodb://localhost:27017/onlineshopping", {
   useNewUrlParser: true,
@@ -17,17 +22,37 @@ db.once("open", () => {
   console.log(`Connected to '${db.name}' db`);
 });
 
-const models = {
-  categories: Categories,
-  config: Config,
-  messages: Message,
-  products: Product,
+const collsData = {
+  categories: { model: Categories },
+  config: { model: Config },
+  messages: { model: Message, addEndpoint: "/addMessage" },
+  products: { model: Product, addEndpoint: "/addProduct" },
 };
 
-const getDocsFromCollection = (collection) => {
-  return app.get(`/${collection}`, function (req, res) {
-    models[collection].find({}, function (err, docs) {
+const getDocsFromCollection = (collection, callback) => {
+  app.get(`/${collection}`, function (req, res) {
+    collsData[collection].model.find({}, function (err, docs) {
+      callback ? res.send(callback(docs)) : res.send(docs);
+    });
+  });
+};
+
+const getPromProducts = () => {
+  app.get("/promProducts", function (req, res) {
+    Product.find({ prom: true }, function (err, docs) {
       res.send(docs);
+    });
+  });
+};
+
+const addNewDoc = (collection) => {
+  app.post(collection.addEndpoint, jsonParser, function (req, res) {
+    const newDoc = new collection.model(req.body);
+    newDoc.save((err, addedDoc) => {
+      if (err) return console.log(err);
+      console.log("Added", addedDoc);
+      res.statusCode = 200;
+      res.end();
     });
   });
 };
@@ -46,30 +71,12 @@ app.get("/products/:id", function (req, res) {
   });
 });
 
-app.get("/promProducts", function (req, res) {
-  Product.find({ prom: true }, function (err, docs) {
-    console.log("Error: ", err);
-    res.send(docs);
-  });
-});
-
-app.post("/addProduct", function (req, res) {
-  const newProduct = new Product(req.body);
-  newProduct.save((err, addedProduct) => {
-    if (err) return console.log(err);
-    console.log("Added", addedProduct);
-    res.statusCode = 200;
-    res.end();
-  });
-});
+getPromProducts();
+addNewDoc(collsData.products);
 
 // Categories ----
 
-app.get("/categories", function (req, res) {
-  Categories.find({}, function (err, docs) {
-    res.send(docs[0].categories);
-  });
-});
+getDocsFromCollection("categories", (docs) => docs[0].categories);
 
 app.get("/categories/names", function (req, res) {
   Categories.find({}, function (err, docs) {
@@ -80,14 +87,11 @@ app.get("/categories/names", function (req, res) {
 // Messages ----
 
 getDocsFromCollection("messages");
+addNewDoc(collsData.messages);
 
 // Config ----
 
-app.get("/config", function (req, res) {
-  Config.find({}, function (err, docs) {
-    res.send(docs[0]);
-  });
-});
+getDocsFromCollection("config", (docs) => docs[0]);
 
 // -----
 
