@@ -1,9 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const Product = require("./models/productModel");
-const Categories = require("./models/categoriesModel");
-const Message = require("./models/messageModel");
-const Config = require("./models/configModel");
+const Product = require("../models/productModel");
+const Categories = require("../models/categoriesModel");
+const Message = require("../models/messageModel");
+const Config = require("../models/configModel");
 
 const collsModels = {
   categories: Categories,
@@ -77,9 +77,9 @@ const getByNameContains = (collection) => {
   });
 };
 
-const getProductsWhere = () => {
-  router.get(`/products/where/:property/:value`, (req, res) =>
-    Product.find(
+const getDocsWhere = (collection) => {
+  router.get(`/${collection}/where/:property/:value`, (req, res) =>
+    collsModels[collection].find(
       { [req.params.property]: { $eq: req.params.value } },
       (err, docs) => {
         if (err) return console.log(err);
@@ -105,19 +105,19 @@ Object.keys(collsModels).forEach((collection) => {
   getDocsFromCollection(collection);
   updateDoc(collection);
 });
+// Categories ----
+getDocById("categories");
+getCategoriesNames();
+// Config ----
+getDocById("config");
+// Messages ----
+addNewDoc("messages");
+deleteDoc("messages");
 // Products ----
 getDocById("products");
 addNewDoc("products");
 deleteDoc("products");
 getByNameContains("products");
-getProductsWhere();
-// Categories ----
-getDocById("categories");
-getCategoriesNames();
-// Messages ----
-addNewDoc("messages");
-deleteDoc("messages");
-// Config ----
-getDocById("config");
+getDocsWhere("products");
 
 module.exports = router;
