@@ -99,7 +99,6 @@ const getCategoriesNames = () => {
 };
 
 router.get("/", (req, res) => res.render("index.ejs"));
-
 // All collections ----
 Object.keys(collsModels).forEach((collection) => {
   getDocsFromCollection(collection);

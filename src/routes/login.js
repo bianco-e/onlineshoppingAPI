@@ -1,39 +1,51 @@
 const express = require("express");
 const router = express.Router();
-const bcrypt = require("bcryptjs");
+
+const cookieParser = require("cookie-parser");
+const passport = require("passport");
 const Admin = require("../models/adminModel");
 
-const adminRegister = () => {
-  router.post("/register", (req, res) => {
-    const { username, password } = req.body;
-    bcrypt.genSalt(10, function (err, salt) {
-      if (err) return console.log(err);
-      bcrypt.hash(password, salt, function (err, hash) {
-        if (err) return console.log(err);
-        const newAdmin = new Admin({ username, password: hash });
-        newAdmin.save((err, addedAdmin) => {
-          if (err) return console.log(err);
-          res.status(200).send("Added" + addedAdmin);
-          res.end();
-        });
-      });
-    });
+router.use(express.urlencoded({ extended: true }));
+router.use(cookieParser("secret"));
+
+router.use(passport.initialize());
+router.use(passport.session());
+
+require("../config/passport")(passport);
+
+router.post("/register", (req, res) => {
+  const { username, password } = req.body;
+  const newAdmin = new Admin({ username });
+  newAdmin.password = newAdmin.hashPassword(password);
+  newAdmin.save((err, addedAdmin) => {
+    if (err) return console.log(err);
+    res.status(200).send("Added" + addedAdmin);
+    res.end();
   });
+});
+
+router.get("/login", (req, res) => {
+  res.render("login");
+});
+
+router.post(
+  "/login",
+  passport.authenticate("local-login", {
+    successRedirect: "/",
+    failureRedirect: "/login",
+  })
+);
+
+router.get("/logout", (req, res) => {
+  req.logout();
+  res.redirect("/login");
+});
+
+const checkAuth = (req, res, next) => {
+  console.log(req.session.passport);
+  if (req.path !== "/login")
+    req.session.passport.user ? next() : res.redirect("/login");
+  else next();
 };
 
-const adminLogin = () => {
-  router.get("/login/:name/:password", (req, res) => {
-    const { name, password } = req.params;
-    Admin.findOne({ username: name }, (err, doc) => {
-      if (err) return console.log(err);
-      if (doc)
-        bcrypt.compare(password, doc.password).then((resp) => res.send(resp));
-      else res.send(false);
-    });
-  });
-};
-
-adminLogin();
-adminRegister();
-
-module.exports = router;
+module.exports = { loginRouter: router, checkAuth };
