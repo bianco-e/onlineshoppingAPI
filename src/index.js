@@ -2,9 +2,10 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const routes = require("./routes/routes");
+const session = require("express-session");
+const passport = require("passport");
 const { loginRouter, checkAuth } = require("./routes/login");
 const { dbUrl } = require("./config/database");
-const session = require("express-session");
 
 const app = express();
 app.set("port", 5000);
@@ -19,6 +20,8 @@ app.use(
     saveUninitialized: true,
   })
 );
+app.use(passport.initialize());
+app.use(passport.session());
 app.use(checkAuth);
 app.use(loginRouter);
 app.use(routes);

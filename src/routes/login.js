@@ -1,15 +1,11 @@
 const express = require("express");
 const router = express.Router();
-
 const cookieParser = require("cookie-parser");
 const passport = require("passport");
 const Admin = require("../models/adminModel");
 
 router.use(express.urlencoded({ extended: true }));
 router.use(cookieParser("secret"));
-
-router.use(passport.initialize());
-router.use(passport.session());
 
 require("../config/passport")(passport);
 
@@ -42,9 +38,8 @@ router.get("/logout", (req, res) => {
 });
 
 const checkAuth = (req, res, next) => {
-  console.log(req.session.passport);
   if (req.path !== "/login")
-    req.session.passport.user ? next() : res.redirect("/login");
+    req.isAuthenticated() ? next() : res.redirect("/login");
   else next();
 };
 
